@@ -96,15 +96,15 @@
             const lat = parseFloat(document.getElementById('latitude').value);
             const elev = parseFloat(document.getElementById('elevation').value);
             const depth = parseFloat(document.getElementById('depth').value);
-            const cl = parseFloat(document.getElementById('cl').value);
-            const k = parseFloat(document.getElementById('k').value);
-            const ca = parseFloat(document.getElementById('ca').value);
+         //   const cl = parseFloat(document.getElementById('cl').value);
+      //      const k = parseFloat(document.getElementById('k').value);
+      //      const ca = parseFloat(document.getElementById('ca').value);
 
             let results = "<h3>产率（atoms/g/yr）:</h3>";
             for (const nuclide in P0) {
                 let rate = P0[nuclide];
-                if (nuclide === '36Cl') {
-                    rate = calculate36Cl(cl, k, ca, elev, lat, depth);
+          //      if (nuclide === '36Cl') {
+      //              rate = calculate36Cl(cl, k, ca, elev, lat, depth);
                 } else {
                     rate *= elevationFactor(elev) * latitudeFactor(lat) * depthAttenuation(depth);
                 }

@@ -71,25 +71,25 @@
         }
 
         // 计算36Cl产率（简化模型）
-        function calculate36Cl(cl, k, ca, elevation, lat, depth) {
+  //      function calculate36Cl(cl, k, ca, elevation, lat, depth) {
             // 参数假设（需根据文献调整）
-            const sigmaCl = 1e-30;   // 快中子截面 (cm²)
-            const sigmaK = 3e-30;    // 热中子截面
-            const sigmaCa = 5e-30;
-            const phiFast = 5e-6 * elevationFactor(elevation) * latitudeFactor(lat); // 快中子通量
-            const phiThermal = 3e-6 * elevationFactor(elevation) * latitudeFactor(lat); // 热中子通量
+    //        const sigmaCl = 1e-30;   // 快中子截面 (cm²)
+   //         const sigmaK = 3e-30;    // 热中子截面
+  //          const sigmaCa = 5e-30;
+  //          const phiFast = 5e-6 * elevationFactor(elevation) * latitudeFactor(lat); // 快中子通量
+  //          const phiThermal = 3e-6 * elevationFactor(elevation) * latitudeFactor(lat); // 热中子通量
 
             // 原子数/g (ppm转原子/g)
-            const atomsCl = (cl * 1e-6 / 35.45) * 6.022e23;
-            const atomsK = (k * 1e-6 / 39.1) * 6.022e23;
-            const atomsCa = (ca * 1e-6 / 40.08) * 6.022e23;
+  //          const atomsCl = (cl * 1e-6 / 35.45) * 6.022e23;
+ //           const atomsK = (k * 1e-6 / 39.1) * 6.022e23;
+//            const atomsCa = (ca * 1e-6 / 40.08) * 6.022e23;
 
             // 各组分产率
-            const PCl = sigmaCl * phiFast * atomsCl;
-            const PK = sigmaK * phiThermal * atomsK;
-            const PCa = sigmaCa * phiThermal * atomsCa;
+//            const PCl = sigmaCl * phiFast * atomsCl;
+ //           const PK = sigmaK * phiThermal * atomsK;
+ //           const PCa = sigmaCa * phiThermal * atomsCa;
 
-            return (PCl + PK + PCa) * depthAttenuation(depth);
+  //          return (PCl + PK + PCa) * depthAttenuation(depth);
         }
 
         function calculate() {

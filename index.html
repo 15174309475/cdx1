@@ -38,7 +38,7 @@
         const P0 = {
             '10Be': 6,    // atoms/g/yr
             '26Al': 36.8,
-            '14C': 12.5,
+            '14C': 20,
             '3He': 124,
             '21Ne': 21,
             '36Cl': 54       // 需单独计算
@@ -51,7 +51,16 @@
 
         // 纬度校正因子（简化模型）
         function latitudeFactor(lat) {
-            return Math.min(1, 1 - (Math.abs(lat) - 60) * 0.01);
+            const alpha = 10.275;
+    const k = 0.9615;
+   const latRad = lat * Math.PI / 180;
+    const R_C = 14.9 * Math.pow(Math.cos(latRad), 4);
+    
+    // 极地保护逻辑：R_C ≤ 0时返回1（避免NaN）
+    if (R_C <= 0) return 1.0;
+    
+    // 计算Dorman函数：1 - exp(-alpha * R_C^(-k))
+    return 1 - Math.exp(-alpha * Math.pow(R_C, -k));
         }
 
         // 深度衰减因子（衰减长度150 g/cm²，密度2.7 g/cm³）

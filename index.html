@@ -2,107 +2,107 @@
 <html>
 <head>
     <title>宇宙成因核素产率计算器</title>
-    <meta charset="utf-8">
     <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
         .input-group { margin: 10px 0; }
-        label { display: inline-block; width: 150px; }
-        input, select { width: 200px; padding: 5px; }
-        button { padding: 10px 20px; margin-top: 10px; }
+        input { margin-left: 5px; }
+        .result { margin-top: 20px; font-weight: bold; }
     </style>
 </head>
 <body>
     <h2>宇宙成因核素产率计算器</h2>
-    
     <div class="input-group">
-        <label for="nuclide">核素类型:</label>
-        <select id="nuclide">
-            <option value="Be-10">¹⁰Be</option>
-            <option value="Al-26">²⁶Al</option>
-        </select>
+        纬度（度）: <input type="number" id="latitude" value="45">
     </div>
-
     <div class="input-group">
-        <label for="latitude">纬度 (°):</label>
-        <input type="number" id="latitude" min="-90" max="90" value="45">
+        海拔（米）: <input type="number" id="elevation" value="0">
     </div>
-
     <div class="input-group">
-        <label for="elevation">海拔 (m):</label>
-        <input type="number" id="elevation" value="2000">
+        深度（厘米）: <input type="number" id="depth" value="0">
     </div>
-
+    <h3>36Cl 相关元素浓度（ppm）</h3>
     <div class="input-group">
-        <label for="depth">样本深度 (g/cm²):</label>
-        <input type="number" id="depth" value="0">
+        Cl: <input type="number" id="cl" value="100">
     </div>
-
+    <div class="input-group">
+        K: <input type="number" id="k" value="10000">
+    </div>
+    <div class="input-group">
+        Ca: <input type="number" id="ca" value="50000">
+    </div>
     <button onclick="calculate()">计算</button>
-
-    <div id="result" style="margin-top: 20px; font-weight: bold;"></div>
+    <div id="results" class="result"></div>
 
     <script>
-        // 核素参数库 (基于简化模型)
-        const parameters = {
-            'Be-10': {
-                baseProduction: 6,    // atoms/g/yr (海平面高纬度)
-                attenuationLength: 160, // g/cm² (中子衰减长度)
-                muonContribution: 0.03  // atoms/g/yr (μ子产率)
-            },
-            'Al-26': {
-                baseProduction: 36.8,
-                attenuationLength: 160,
-                muonContribution: 0.12
-            }
+        // 标称产率（SLHL: 海平面高纬度）
+        const P0 = {
+            '10Be': 6,    // atoms/g/yr
+            '26Al': 36.8,
+            '14C': 12.5,
+            '3He': 110,
+            '21Ne': 21,
+            '36Cl': 54       // 需单独计算
         };
 
-        // 大气深度计算参数
-        const referenceAtmosphericDepth = 1033; // g/cm² (海平面)
-        const atmosphericScaleHeight = 5.5;     // km
+        // 海拔校正因子（每千米增加15%）
+        function elevationFactor(elevation) {
+            return 1 + 0.15 * (elevation / 1000);
+        }
+
+        // 纬度校正因子（简化模型）
+        function latitudeFactor(lat) {
+            return Math.min(1, 1 - (Math.abs(lat) - 60) * 0.01);
+        }
+
+        // 深度衰减因子（衰减长度150 g/cm²，密度2.7 g/cm³）
+        function depthAttenuation(depth) {
+            const L = 150;  // g/cm²
+            const density = 2.7; // g/cm³
+            return Math.exp(- (depth * density) / L);
+        }
+
+        // 计算36Cl产率（简化模型）
+        function calculate36Cl(cl, k, ca, elevation, lat, depth) {
+            // 参数假设（需根据文献调整）
+            const sigmaCl = 1e-30;   // 快中子截面 (cm²)
+            const sigmaK = 3e-30;    // 热中子截面
+            const sigmaCa = 5e-30;
+            const phiFast = 5e-6 * elevationFactor(elevation) * latitudeFactor(lat); // 快中子通量
+            const phiThermal = 3e-6 * elevationFactor(elevation) * latitudeFactor(lat); // 热中子通量
+
+            // 原子数/g (ppm转原子/g)
+            const atomsCl = (cl * 1e-6 / 35.45) * 6.022e23;
+            const atomsK = (k * 1e-6 / 39.1) * 6.022e23;
+            const atomsCa = (ca * 1e-6 / 40.08) * 6.022e23;
+
+            // 各组分产率
+            const PCl = sigmaCl * phiFast * atomsCl;
+            const PK = sigmaK * phiThermal * atomsK;
+            const PCa = sigmaCa * phiThermal * atomsCa;
+
+            return (PCl + PK + PCa) * depthAttenuation(depth);
+        }
 
         function calculate() {
-            // 获取输入值
-            const nuclide = document.getElementById('nuclide').value;
-            const latitude = parseFloat(document.getElementById('latitude').value);
-            const elevation = parseFloat(document.getElementById('elevation').value);
+            const lat = parseFloat(document.getElementById('latitude').value);
+            const elev = parseFloat(document.getElementById('elevation').value);
             const depth = parseFloat(document.getElementById('depth').value);
+            const cl = parseFloat(document.getElementById('cl').value);
+            const k = parseFloat(document.getElementById('k').value);
+            const ca = parseFloat(document.getElementById('ca').value);
 
-            // 获取核素参数
-            const params = parameters[nuclide];
-
-          // 纬度校正 (基于Balco et al. 2008的改进cos²λ模型)
-const latRad = Math.abs(latitude) * Math.PI / 180;
-const latitudeFactor = 1 - 0.259 * Math.pow(Math.cos(latRad), 2);
-
-// 海拔校正 (基于Stone 2000的精确模型)
-const atmosphericScaleHeight = 5.8;    // 大气标高 (km)
-const elevationExponent = -0.758;     // 海拔校正指数
-
-const atmosphericDepth = referenceAtmosphericDepth * Math.exp(-elevation/1000 / atmosphericScaleHeight);
-
-            // 3. 深度衰减 (指数衰减)
-            const depthFactor = Math.exp(-depth / params.attenuationLength);
-
-            // 总产率计算
-            const neutronProduction = params.baseProduction * latitudeFactor * elevationFactor * depthFactor;
-            const totalProduction = neutronProduction + params.muonContribution * depthFactor;
-
-            // 显示结果
-            document.getElementById('result').innerHTML = `
-                ${nuclide} 产率: ${totalProduction.toFixed(2)} atoms/g/yr<br>
-                <small>计算参数: 纬度因子=${latitudeFactor.toFixed(2)}, 海拔因子=${elevationFactor.toFixed(2)}, 深度因子=${depthFactor.toFixed(2)}</small>
-            `;
+            let results = "<h3>产率（atoms/g/yr）:</h3>";
+            for (const nuclide in P0) {
+                let rate = P0[nuclide];
+                if (nuclide === '36Cl') {
+                    rate = calculate36Cl(cl, k, ca, elev, lat, depth);
+                } else {
+                    rate *= elevationFactor(elev) * latitudeFactor(lat) * depthAttenuation(depth);
+                }
+                results += `${nuclide}: ${rate.toFixed(2)}<br>`;
+            }
+            document.getElementById('results').innerHTML = results;
         }
     </script>
-
-    <div style="margin-top: 30px; color: #666; font-size: 0.9em;">
-        <h3>参考文献：</h3>
-        <ul>
-            <li>Lal, D. (1991) 宇宙射线产率模型</li>
-            <li>Stone, J.O. (2000) 大气深度参数化</li>
-            <li>Balco, G. (2008) 现代产率标定</li>
-        </ul>
-        <p>注意：本计算器使用简化模型，科研用途请使用专业软件如CRONUScalc</p>
-    </div>
 </body>
 </html>

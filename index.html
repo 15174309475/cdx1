@@ -19,20 +19,7 @@
     </div>
     <div class="input-group">
         深度（厘米）: <input type="number" id="depth" value="0">
-    </div>
-    <h3>36Cl 相关元素浓度（ppm）</h3>
-    <div class="input-group">
-   //     Cl: <input type="number" id="cl" value="100">
- //   </div>
-    <div class="input-group">
-//        K: <input type="number" id="k" value="10000">
-//    </div>
-//    <div class="input-group">
-//        Ca: <input type="number" id="ca" value="50000">
-//    </div>
-//    <button onclick="calculate()">计算</button>
-//    <div id="results" class="result"></div>
-
+ 
     <script>
         // 标称产率（SLHL: 海平面高纬度）
         const P0 = {
@@ -70,41 +57,19 @@
             return Math.exp(- (depth * density) / L);
         }
 
-        // 计算36Cl产率（简化模型）
-  //      function calculate36Cl(cl, k, ca, elevation, lat, depth) {
-            // 参数假设（需根据文献调整）
-    //        const sigmaCl = 1e-30;   // 快中子截面 (cm²)
-   //         const sigmaK = 3e-30;    // 热中子截面
-  //          const sigmaCa = 5e-30;
-  //          const phiFast = 5e-6 * elevationFactor(elevation) * latitudeFactor(lat); // 快中子通量
-  //          const phiThermal = 3e-6 * elevationFactor(elevation) * latitudeFactor(lat); // 热中子通量
 
-            // 原子数/g (ppm转原子/g)
-  //          const atomsCl = (cl * 1e-6 / 35.45) * 6.022e23;
- //           const atomsK = (k * 1e-6 / 39.1) * 6.022e23;
-//            const atomsCa = (ca * 1e-6 / 40.08) * 6.022e23;
-
-            // 各组分产率
-//            const PCl = sigmaCl * phiFast * atomsCl;
- //           const PK = sigmaK * phiThermal * atomsK;
- //           const PCa = sigmaCa * phiThermal * atomsCa;
-
-  //          return (PCl + PK + PCa) * depthAttenuation(depth);
         }
 
         function calculate() {
             const lat = parseFloat(document.getElementById('latitude').value);
             const elev = parseFloat(document.getElementById('elevation').value);
             const depth = parseFloat(document.getElementById('depth').value);
-         //   const cl = parseFloat(document.getElementById('cl').value);
-      //      const k = parseFloat(document.getElementById('k').value);
-      //      const ca = parseFloat(document.getElementById('ca').value);
+      
 
             let results = "<h3>产率（atoms/g/yr）:</h3>";
             for (const nuclide in P0) {
                 let rate = P0[nuclide];
-          //      if (nuclide === '36Cl') {
-      //              rate = calculate36Cl(cl, k, ca, elev, lat, depth);
+      
                 } else {
                     rate *= elevationFactor(elev) * latitudeFactor(lat) * depthAttenuation(depth);
                 }

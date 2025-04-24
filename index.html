@@ -3,14 +3,23 @@
 <head>
     <title>宇宙成因核素产率计算器</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .input-group { margin: 10px 0; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            max-width: 600px;
+        }
+        .input-group { 
+            margin: 15px 0; 
+        }
+        label {
+            display: inline-block;
+            width: 100px;
+        }
         input { 
-            margin-left: 5px; 
             width: 150px;
-            padding: 4px;
+            padding: 6px;
             border: 1px solid #ccc;
-            border-radius: 3px;
+            border-radius: 4px;
         }
         .result { 
             margin-top: 20px; 
@@ -19,18 +28,36 @@
             border-radius: 5px;
         }
         button { 
-            padding: 8px 20px;
+            padding: 10px 25px;
             background-color: #2196F3;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             margin-top: 15px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0b7dda;
         }
         .error { 
             color: red; 
-            margin: 10px 0;
-            padding: 5px;
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #ffeeee;
+            border-radius: 4px;
+        }
+        .debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        h2 {
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
         }
     </style>
 </head>
@@ -38,31 +65,34 @@
     <h2>宇宙成因核素产率计算器</h2>
     
     <div class="input-group">
-        纬度（度）: <input type="number" id="latitude" placeholder="">
+        <label for="latitude">纬度（度）:</label>
+        <input type="number" id="latitude" min="-90" max="90" step="0.0001">
     </div>
     <div class="input-group">
-        海拔（米）: <input type="number" id="elevation" placeholder="">
+        <label for="elevation">海拔（米）:</label>
+        <input type="number" id="elevation" min="0" step="1">
     </div>
     <div class="input-group">
-        深度（厘米）: <input type="number" id="depth" placeholder="">
+        <label for="depth">深度（厘米）:</label>
+        <input type="number" id="depth" min="0" step="0.1">
     </div>
     
     <button onclick="calculate()">计算产率</button>
-    <div id="error" class="error"></div>
-    <div id="results" class="result"></div>
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="results" class="result" style="display: none;"></div>
 
     <script>
         // 标称产率（SLHL）
         const P0 = {
-            '10Be': 6,    // atoms/g/yr
-            '26Al': 36.8,
-            '14C': 20,
-            '3He': 124,
-            '21Ne': 21,
-            '36Cl': 54
+            '¹⁰Be': 6,    // atoms/g/yr
+            '²⁶Al': 36.8,
+            '¹⁴C': 20,
+            '³He': 124,
+            '²¹Ne': 21,
+            '³⁶Cl': 54
         };
 
-        // 输入验证增强
+        // 输入验证
         function getInputValue(id) {
             const input = document.getElementById(id);
             const value = parseFloat(input.value);
@@ -77,24 +107,23 @@
         // 精确气压计算
         function calculateAirPressure(elevation) {
             const pressure_hPa = 1013 * Math.pow(1 - elevation / 44330, 5.255);
-            // 单位转换公式：1 hPa ≈ 1.0193 g/cm²（基于海平面值 1013 hPa → 1033 g/cm²）
-            return pressure_hPa * (1033 / 1013); 
+            return pressure_hPa * (1033 / 1013); // 转换为 g/cm²
         }
 
         // 海拔校正因子
         function elevationCorrection(elevation, lat) {
             const h = calculateAirPressure(elevation);
-            const z = 1033 - h; // 使用正确海平面大气质量 1033 g/cm²
+            const z = 1033 - h;
 
-            if (z <= 0) return 1.0; // 处理负值或零值
+            if (z <= 0) return 1.0;
             
             const params = {
                 n: 1.0177e-2,
-                k: 0.9615,//-3.9527e-1,
+                k: 0.9615,
                 alpha: 10.275,
                 a: [
-                    8.5236e-6,   -6.3670e-7,  -7.0814e-9,
-                    -9.9182e-9,  9.9250e-10,  2.4925e-11,
+                    8.5236e-6, -6.3670e-7, -7.0814e-9,
+                    -9.9182e-9, 9.9250e-10, 2.4925e-11,
                     3.8615e-12, -4.8194e-13, -1.5371e-14
                 ]
             };
@@ -109,24 +138,18 @@
 
             // Term 2
             const term2 = (
-               ( params.a[0] + 
-                params.a[1] * R_C + 
-                params.a[2] * Math.pow(R_C, 2)
-            ) *(  Math.pow(1033, 2) -Math.pow(h, 2))) / 2;
+                (params.a[0] + params.a[1] * R_C + params.a[2] * Math.pow(R_C, 2)) * 
+                (Math.pow(1033, 2) - Math.pow(h, 2))) / 2;
 
             // Term 3
             const term3 = (
-           (     params.a[3] + 
-                params.a[4] * R_C + 
-                params.a[5] * Math.pow(R_C, 2)
-            ) *(  Math.pow(1033, 3) -Math.pow(h, 3)) )/ 3;
+                (params.a[3] + params.a[4] * R_C + params.a[5] * Math.pow(R_C, 2)) * 
+                (Math.pow(1033, 3) - Math.pow(h, 3))) / 3;
 
             // Term 4
             const term4 = (
-           (     params.a[6] + 
-                params.a[7] * R_C + 
-                params.a[8] * Math.pow(R_C, 2)
-            ) *(  Math.pow(1033, 4) -Math.pow(h, 4)) ) / 4;
+                (params.a[6] + params.a[7] * R_C + params.a[8] * Math.pow(R_C, 2)) * 
+                (Math.pow(1033, 4) - Math.pow(h, 4))) / 4;
 
             const c = term1 + term2 + term3 + term4;
             if (c <= 0 || c > 1e6) return 1.0;
@@ -153,8 +176,8 @@
         // 主计算函数
         function calculate() {
             // 重置状态
-            document.getElementById('error').innerHTML = '';
-            document.getElementById('results').innerHTML = '';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('results').style.display = 'none';
             document.querySelectorAll('input').forEach(i => i.style.border = "1px solid #ccc");
 
             // 获取输入
@@ -163,13 +186,28 @@
             const depth = getInputValue('depth');
 
             // 输入验证
+            const errorEl = document.getElementById('error');
             if (lat === null || elev === null || depth === null) {
-                document.getElementById('error').innerHTML = "错误：请填写所有输入项（必须为数字）";
+                errorEl.innerHTML = "错误：请填写所有输入项（必须为数字）";
+                errorEl.style.display = 'block';
                 return;
             }
             
             if (Math.abs(lat) > 90) {
-                document.getElementById('error').innerHTML = "错误：纬度必须在-90到90度之间";
+                errorEl.innerHTML = "错误：纬度必须在-90到90度之间";
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            if (elev < 0) {
+                errorEl.innerHTML = "错误：海拔不能为负数";
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            if (depth < 0) {
+                errorEl.innerHTML = "错误：深度不能为负数";
+                errorEl.style.display = 'block';
                 return;
             }
 
@@ -187,15 +225,17 @@
 
             // 显示调试信息
             results += `
-                <div style="margin-top:15px;color:#666;">
-                    调试信息：
+                <div class="debug-info">
+                    <h4>调试信息：</h4>
                     <div>海拔校正因子 = ${elevCorr.toFixed(4)}</div>
                     <div>纬度校正因子 = ${latCorr.toFixed(4)}</div>
                     <div>深度衰减因子 = ${depthCorr.toFixed(4)}</div>
                 </div>
             `;
 
-            document.getElementById('results').innerHTML = results;
+            const resultsEl = document.getElementById('results');
+            resultsEl.innerHTML = results;
+            resultsEl.style.display = 'block';
         }
     </script>
 </body>

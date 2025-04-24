@@ -1,73 +1,164 @@
-<script>
-    // ...（保留其他不变的部分，仅修改以下函数）
+<!DOCTYPE html>
+<html>
+<head>
+    <title>宇宙成因核素产率计算器</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .input-group { margin: 10px 0; }
+        input { 
+            margin-left: 5px; 
+            width: 150px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .result { 
+            margin-top: 20px; 
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        button { 
+            padding: 8px 20px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        .error { 
+            color: red; 
+            margin: 10px 0;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2>宇宙成因核素产率计算器</h2>
+    
+    <div class="input-group">
+        纬度（度）: <input type="number" id="latitude" placeholder="例: 45.5">
+    </div>
+    <div class="input-group">
+        海拔（米）: <input type="number" id="elevation" placeholder="例: 2000">
+    </div>
+    <div class="input-group">
+        深度（厘米）: <input type="number" id="depth" placeholder="例: 50">
+    </div>
+    
+    <button onclick="calculate()">计算产率</button>
+    <div id="error" class="error"></div>
+    <div id="results" class="result"></div>
 
-    // 修复后的海拔校正函数（完整逻辑）
+    <script>
+        // 标称产率（SLHL）
+        const P0 = {
+            '10Be': 6,    // atoms/g/yr
+            '26Al': 36.8,
+            '14C': 20,
+            '3He': 124,
+            '21Ne': 21,
+            '36Cl': 54
+        };
+
+        // 输入验证增强
+        function getInputValue(id) {
+            const input = document.getElementById(id);
+            const value = parseFloat(input.value);
+            if (isNaN(value)) {
+                input.style.border = "2px solid red";
+                return null;
+            }
+            input.style.border = "1px solid #ccc";
+            return value;
+        }
+
+        // 精确气压计算
+         function calculateAirPressure(elevation) {
+        const pressure_hPa = 1013 * Math.pow(1 - elevation / 44330, 5.255);
+        // 单位转换公式：1 hPa ≈ 1.0193 g/cm²（基于海平面值 1013 hPa → 1033 g/cm²）
+        return pressure_hPa * (1033 / 1013); 
+    }
+
+    // 海拔校正因子（修复单位问题）
     function elevationCorrection(elevation, lat) {
         const h = calculateAirPressure(elevation);
         const z = 1033 - h; // 使用正确海平面大气质量 1033 g/cm²
 
-        if (z <= 0) return 1.0;
-
-        const params = {
-            n: 1.0177e-2,
-            k: -3.9527e-1,
-            alpha: 10.275,
-            a: [
-                8.5236e-6,   -6.3670e-7,  -7.0814e-9,
-                -9.9182e-9,  9.9250e-10,  2.4925e-11,
-                3.8615e-12, -4.8194e-13, -1.5371e-14
-            ]
-        };
-
-        const latRad = Math.abs(lat) * Math.PI / 180;
-        const R_C = 14.9 * Math.pow(Math.cos(latRad), 4);
-        if (R_C <= 1e-6) return 1.0;
-
-        try {
-            const x = z;
-            // Term 1
-            const expArg = -params.alpha * Math.pow(R_C, -params.k);
-            const denominator = 1 + Math.exp(expArg);
-            const term1 = (params.n / denominator) * x;
-
-            // Term 2
-            const term2 = (
-                params.a[0] + 
-                params.a[1] * R_C + 
-                params.a[2] * R_C**2
-            ) * x**2 / 2;
-
-            // Term 3
-            const term3 = (
-                params.a[3] + 
-                params.a[4] * R_C + 
-                params.a[5] * R_C**2
-            ) * x**3 / 3;
-
-            // Term 4
-            const term4 = (
-                params.a[6] + 
-                params.a[7] * R_C + 
-                params.a[8] * R_C**2
-            ) * x**4 / 4;
-
-            const c = term1 + term2 + term3 + term4;
-            if (c <= 0 || c > 1e6) return 1.0;
-
-            return Math.exp(-z / c); // 注意：指数应为负号
-        } catch (e) {
-            console.error('海拔校正计算错误:', e);
-            return 1.0;
-        }
+        if (z <= 0) return 1.0; // 处理负值或零值
+        // ...（后续计算保持原样，无需修改）
     }
 
-    // 纬度校正因子（保持唯一函数定义）
+    // 纬度校正因子（优化数值稳定性）
     function latitudeCorrection(lat) {
         const latRad = Math.abs(lat) * Math.PI / 180;
         const R_C = 14.9 * Math.pow(Math.cos(latRad), 4);
         return R_C <= 1e-6 ? 1.0 : 1 - Math.exp(-10.275 * Math.pow(R_C, -0.9615));
     }
- // 深度衰减
+
+            try {
+
+
+
+
+                     const params = {
+                n: 1.0177e-2,
+                k: -3.9527e-1,
+                alpha: 10.275,
+                a: [
+                    8.5236e-6,   -6.3670e-7,  -7.0814e-9,
+                    -9.9182e-9,  9.9250e-10,  2.4925e-11,
+                    3.8615e-12, -4.8194e-13, -1.5371e-14
+                ]
+            };
+                const x = z;
+                // Term 1
+                const expArg = -params.alpha * Math.pow(R_C, -params.k);
+                const denominator = 1 + Math.exp(expArg);
+                const term1 = (params.n / denominator) * x;
+
+                // Term 2
+                const term2 = (
+                    params.a[0] + 
+                    params.a[1] * R_C + 
+                    params.a[2] * R_C**2
+                ) * x**2 / 2;
+
+                // Term 3
+                const term3 = (
+                    params.a[3] + 
+                    params.a[4] * R_C + 
+                    params.a[5] * R_C**2
+                ) * x**3 / 3;
+
+                // Term 4
+                const term4 = (
+                    params.a[6] + 
+                    params.a[7] * R_C + 
+                    params.a[8] * R_C**2
+                ) * x**4 / 4;
+
+                const c = term1 + term2 + term3 + term4;
+                if (c <= 0 || c > 1e6) return 1.0;
+
+                return Math.exp(-z / c); // 修复指数符号错误
+            } catch (e) {
+                console.error('海拔校正计算错误:', e);
+                return 1.0;
+            }
+        }
+
+        // 纬度校正因子
+        function latitudeCorrection(lat) {
+            const alpha = 10.275;
+            const k = 0.9615;
+            const latRad = Math.abs(lat) * Math.PI / 180;
+            const R_C = 14.9 * Math.pow(Math.cos(latRad), 4);
+            return R_C <= 0 ? 1.0 : 1 - Math.exp(-alpha * Math.pow(R_C, -k));
+        }
+
+        // 深度衰减
         function depthAttenuation(depth) {
             const L = 150;   // 衰减长度 (g/cm²)
             const density = 2.7;  // 密度 (g/cm³)

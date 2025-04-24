@@ -75,34 +75,20 @@
         }
 
         // 精确气压计算
-         function calculateAirPressure(elevation) {
-        const pressure_hPa = 1013 * Math.pow(1 - elevation / 44330, 5.255);
-        // 单位转换公式：1 hPa ≈ 1.0193 g/cm²（基于海平面值 1013 hPa → 1033 g/cm²）
-        return pressure_hPa * (1033 / 1013); 
-    }
+        function calculateAirPressure(elevation) {
+            const pressure_hPa = 1013 * Math.pow(1 - elevation / 44330, 5.255);
+            // 单位转换公式：1 hPa ≈ 1.0193 g/cm²（基于海平面值 1013 hPa → 1033 g/cm²）
+            return pressure_hPa * (1033 / 1013); 
+        }
 
-    // 海拔校正因子（修复单位问题）
-    function elevationCorrection(elevation, lat) {
-        const h = calculateAirPressure(elevation);
-        const z = 1033 - h; // 使用正确海平面大气质量 1033 g/cm²
+        // 海拔校正因子
+        function elevationCorrection(elevation, lat) {
+            const h = calculateAirPressure(elevation);
+            const z = 1033 - h; // 使用正确海平面大气质量 1033 g/cm²
 
-        if (z <= 0) return 1.0; // 处理负值或零值
-        // ...（后续计算保持原样，无需修改）
-    }
-
-    // 纬度校正因子（优化数值稳定性）
-    function latitudeCorrection(lat) {
-        const latRad = Math.abs(lat) * Math.PI / 180;
-        const R_C = 14.9 * Math.pow(Math.cos(latRad), 4);
-        return R_C <= 1e-6 ? 1.0 : 1 - Math.exp(-10.275 * Math.pow(R_C, -0.9615));
-    }
-
-            try {
-
-
-
-
-                     const params = {
+            if (z <= 0) return 1.0; // 处理负值或零值
+            
+            const params = {
                 n: 1.0177e-2,
                 k: -3.9527e-1,
                 alpha: 10.275,
@@ -112,41 +98,40 @@
                     3.8615e-12, -4.8194e-13, -1.5371e-14
                 ]
             };
-                const x = z;
-                // Term 1
-                const expArg = -params.alpha * Math.pow(R_C, -params.k);
-                const denominator = 1 + Math.exp(expArg);
-                const term1 = (params.n / denominator) * x;
+            
+            const latRad = Math.abs(lat) * Math.PI / 180;
+            const R_C = 14.9 * Math.pow(Math.cos(latRad), 4);
+            
+            // Term 1
+            const expArg = -params.alpha * Math.pow(R_C, -params.k);
+            const denominator = 1 + Math.exp(expArg);
+            const term1 = (params.n / denominator) * z;
 
-                // Term 2
-                const term2 = (
-                    params.a[0] + 
-                    params.a[1] * R_C + 
-                    params.a[2] * R_C**2
-                ) * x**2 / 2;
+            // Term 2
+            const term2 = (
+                params.a[0] + 
+                params.a[1] * R_C + 
+                params.a[2] * Math.pow(R_C, 2)
+            ) * Math.pow(z, 2) / 2;
 
-                // Term 3
-                const term3 = (
-                    params.a[3] + 
-                    params.a[4] * R_C + 
-                    params.a[5] * R_C**2
-                ) * x**3 / 3;
+            // Term 3
+            const term3 = (
+                params.a[3] + 
+                params.a[4] * R_C + 
+                params.a[5] * Math.pow(R_C, 2)
+            ) * Math.pow(z, 3) / 3;
 
-                // Term 4
-                const term4 = (
-                    params.a[6] + 
-                    params.a[7] * R_C + 
-                    params.a[8] * R_C**2
-                ) * x**4 / 4;
+            // Term 4
+            const term4 = (
+                params.a[6] + 
+                params.a[7] * R_C + 
+                params.a[8] * Math.pow(R_C, 2)
+            ) * Math.pow(z, 4) / 4;
 
-                const c = term1 + term2 + term3 + term4;
-                if (c <= 0 || c > 1e6) return 1.0;
+            const c = term1 + term2 + term3 + term4;
+            if (c <= 0 || c > 1e6) return 1.0;
 
-                return Math.exp(-z / c); // 修复指数符号错误
-            } catch (e) {
-                console.error('海拔校正计算错误:', e);
-                return 1.0;
-            }
+            return Math.exp(-z / c);
         }
 
         // 纬度校正因子
@@ -180,6 +165,11 @@
             // 输入验证
             if (lat === null || elev === null || depth === null) {
                 document.getElementById('error').innerHTML = "错误：请填写所有输入项（必须为数字）";
+                return;
+            }
+            
+            if (Math.abs(lat) > 90) {
+                document.getElementById('error').innerHTML = "错误：纬度必须在-90到90度之间";
                 return;
             }
 

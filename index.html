@@ -67,4 +67,55 @@
         const R_C = 14.9 * Math.pow(Math.cos(latRad), 4);
         return R_C <= 1e-6 ? 1.0 : 1 - Math.exp(-10.275 * Math.pow(R_C, -0.9615));
     }
-</script>
+ // 深度衰减
+        function depthAttenuation(depth) {
+            const L = 150;   // 衰减长度 (g/cm²)
+            const density = 2.7;  // 密度 (g/cm³)
+            return Math.exp(-(depth * density) / L);
+        }
+
+        // 主计算函数
+        function calculate() {
+            // 重置状态
+            document.getElementById('error').innerHTML = '';
+            document.getElementById('results').innerHTML = '';
+            document.querySelectorAll('input').forEach(i => i.style.border = "1px solid #ccc");
+
+            // 获取输入
+            const lat = getInputValue('latitude');
+            const elev = getInputValue('elevation');
+            const depth = getInputValue('depth');
+
+            // 输入验证
+            if (lat === null || elev === null || depth === null) {
+                document.getElementById('error').innerHTML = "错误：请填写所有输入项（必须为数字）";
+                return;
+            }
+
+            // 计算校正因子
+            const elevCorr = elevationCorrection(elev, lat);
+            const latCorr = latitudeCorrection(lat);
+            const depthCorr = depthAttenuation(depth);
+
+            // 生成结果
+            let results = "<h3>校正后产率（atoms/g/yr）:</h3>";
+            for (const [nuclide, base] of Object.entries(P0)) {
+                const rate = base * elevCorr * latCorr * depthCorr;
+                results += `<div>${nuclide}: <b>${rate.toFixed(2)}</b></div>`;
+            }
+
+            // 显示调试信息
+            results += `
+                <div style="margin-top:15px;color:#666;">
+                    调试信息：
+                    <div>海拔校正因子 = ${elevCorr.toFixed(4)}</div>
+                    <div>纬度校正因子 = ${latCorr.toFixed(4)}</div>
+                    <div>深度衰减因子 = ${depthCorr.toFixed(4)}</div>
+                </div>
+            `;
+
+            document.getElementById('results').innerHTML = results;
+        }
+    </script>
+</body>
+</html>

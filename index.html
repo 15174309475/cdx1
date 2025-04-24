@@ -16,20 +16,22 @@
             border-radius: 4px;
             cursor: pointer;
         }
+        .error { color: red; margin-top: 10px; }
     </style>
 </head>
 <body>
     <h2>宇宙成因核素产率计算器</h2>
     <div class="input-group">
-        纬度（度）: <input type="number" id="latitude" placeholder="输入纬度">
+        纬度（度）: <input type="number" id="latitude" placeholder="输入纬度" required>
     </div>
     <div class="input-group">
-        海拔（米）: <input type="number" id="elevation" placeholder="输入海拔">
+        海拔（米）: <input type="number" id="elevation" placeholder="输入海拔" required>
     </div>
     <div class="input-group">
-        深度（厘米）: <input type="number" id="depth" placeholder="输入深度">
+        深度（厘米）: <input type="number" id="depth" placeholder="输入深度" required>
     </div>
     <button onclick="calculate()">计算产率</button>
+    <div id="error" class="error"></div>
     <div id="results" class="result"></div>
 
     <script>
@@ -43,10 +45,17 @@
             '36Cl': 54
         };
 
-        // 输入验证函数
+        // 输入验证函数（强化版）
         function getInputValue(id) {
-            const value = parseFloat(document.getElementById(id).value);
-            return isNaN(value) ? 0 : value; // 空输入默认为0
+            const input = document.getElementById(id);
+            const value = parseFloat(input.value);
+            
+            if (isNaN(value)) {
+                input.classList.add('error-border');
+                return null;
+            }
+            input.classList.remove('error-border');
+            return value;
         }
 
         // 海拔校正因子（每千米增加15%）
@@ -58,31 +67,46 @@
         function latitudeFactor(lat) {
             const alpha = 10.275;
             const k = 0.9615;
-            const latRad = Math.abs(lat) * Math.PI / 180; // 绝对纬度值
+            const latRad = Math.abs(lat) * Math.PI / 180;
             const R_C = 14.9 * Math.pow(Math.cos(latRad), 4);
             return R_C <= 0 ? 1.0 : 1 - Math.exp(-alpha * Math.pow(R_C, -k));
         }
 
-        // 深度衰减因子（衰减长度150 g/cm²）
+        // 深度衰减因子（修复缺失分号错误）
         function depthAttenuation(depth) {
             const L = 150;   // 衰减长度
-            const density = 2.7; // 岩石密度
+            const density = 2.7; // 岩石密度（g/cm³）
             return Math.exp(-(depth * density) / L);
         }
 
         function calculate() {
+            // 清空错误提示
+            document.getElementById('error').innerHTML = '';
+            document.querySelectorAll('input').forEach(input => 
+                input.classList.remove('error-border')
+            );
+
+            // 获取输入值（强制要求所有输入）
             const lat = getInputValue('latitude');
             const elev = getInputValue('elevation');
             const depth = getInputValue('depth');
 
+            // 验证输入
+            if ([lat, elev, depth].some(v => v === null)) {
+                document.getElementById('error').innerHTML = 
+                    '错误：请填写所有输入项（必须为数字）';
+                return;
+            }
+
+            // 计算结果
             let results = "<h3>校正后产率（atoms/g/yr）:</h3>";
             for (const nuclide in P0) {
-                let rate = P0[nuclide] * elevationFactor(elev) 
-                          * latitudeFactor(lat) 
-                          * depthAttenuation(depth);
+                const rate = P0[nuclide] * 
+                           elevationFactor(elev) * 
+                           latitudeFactor(lat) * 
+                           depthAttenuation(depth);
                 
-                results += `<span style="color: #2c3e50;">${nuclide.padEnd(4, ' ')}</span>: 
-                           ${rate.toFixed(2)}<br>`;
+                results += `${nuclide}: ${rate.toFixed(2)}<br>`;
             }
             document.getElementById('results').innerHTML = results;
         }

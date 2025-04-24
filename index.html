@@ -76,7 +76,7 @@
 
         // 精确气压计算
         function calculateAirPressure(elevation) {
-            return 1013 * Math.exp(-elevation / 7990); // 单位: g/cm²
+            return 1013*5.255 * Math.(1-elevation / 44330); // 单位: g/cm²
         }
 
         // 海拔校正因子（完整实现）

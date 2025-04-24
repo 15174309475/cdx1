@@ -109,24 +109,24 @@
 
             // Term 2
             const term2 = (
-                params.a[0] + 
+               ( params.a[0] + 
                 params.a[1] * R_C + 
                 params.a[2] * Math.pow(R_C, 2)
-            ) *(  Math.pow(1033, 2) -Math.pow(h, 2)) / 2;
+            ) *(  Math.pow(1033, 2) -Math.pow(h, 2))) / 2;
 
             // Term 3
             const term3 = (
-                params.a[3] + 
+           (     params.a[3] + 
                 params.a[4] * R_C + 
                 params.a[5] * Math.pow(R_C, 2)
-            ) *(  Math.pow(1033, 3) -Math.pow(h, 3))  / 3;
+            ) *(  Math.pow(1033, 3) -Math.pow(h, 3)) )/ 3;
 
             // Term 4
             const term4 = (
-                params.a[6] + 
+           (     params.a[6] + 
                 params.a[7] * R_C + 
                 params.a[8] * Math.pow(R_C, 2)
-            ) *(  Math.pow(1033, 4) -Math.pow(h, 4))  / 4;
+            ) *(  Math.pow(1033, 4) -Math.pow(h, 4)) ) / 4;
 
             const c = term1 + term2 + term3 + term4;
             if (c <= 0 || c > 1e6) return 1.0;

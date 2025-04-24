@@ -5,37 +5,54 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         .input-group { margin: 10px 0; }
-        input { margin-left: 5px; width: 120px; }
-        .result { margin-top: 20px; font-weight: bold; }
+        input { 
+            margin-left: 5px; 
+            width: 150px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .result { 
+            margin-top: 20px; 
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
         button { 
-            padding: 8px 16px; 
-            margin-top: 10px;
-            background-color: #4CAF50;
+            padding: 8px 20px;
+            background-color: #2196F3;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
+            margin-top: 15px;
         }
-        .error { color: red; margin-top: 10px; }
+        .error { 
+            color: red; 
+            margin: 10px 0;
+            padding: 5px;
+        }
     </style>
 </head>
 <body>
     <h2>宇宙成因核素产率计算器</h2>
+    
     <div class="input-group">
-        纬度（度）: <input type="number" id="latitude" placeholder="输入纬度" required>
+        纬度（度）: <input type="number" id="latitude" placeholder="例: 45.5">
     </div>
     <div class="input-group">
-        海拔（米）: <input type="number" id="elevation" placeholder="输入海拔" required>
+        海拔（米）: <input type="number" id="elevation" placeholder="例: 2000">
     </div>
     <div class="input-group">
-        深度（厘米）: <input type="number" id="depth" placeholder="输入深度" required>
+        深度（厘米）: <input type="number" id="depth" placeholder="例: 50">
     </div>
+    
     <button onclick="calculate()">计算产率</button>
     <div id="error" class="error"></div>
     <div id="results" class="result"></div>
 
     <script>
-        // 标称产率（SLHL: 海平面高纬度）
+        // 标称产率（SLHL）
         const P0 = {
             '10Be': 6,    // atoms/g/yr
             '26Al': 36.8,
@@ -45,26 +62,84 @@
             '36Cl': 54
         };
 
-        // 输入验证函数（强化版）
+        // 输入验证增强
         function getInputValue(id) {
             const input = document.getElementById(id);
             const value = parseFloat(input.value);
-            
             if (isNaN(value)) {
-                input.classList.add('error-border');
+                input.style.border = "2px solid red";
                 return null;
             }
-            input.classList.remove('error-border');
+            input.style.border = "1px solid #ccc";
             return value;
         }
 
-        // 海拔校正因子（每千米增加15%）
-        function elevationFactor(elevation) {
-            return 1 + 0.15 * (elevation / 1000);
+        // 精确气压计算
+        function calculateAirPressure(elevation) {
+            return 1013 * Math.exp(-elevation / 7990); // 单位: g/cm²
         }
 
-        // 纬度校正因子（Dorman函数模型）
-        function latitudeFactor(lat) {
+        // 海拔校正因子（完整实现）
+        function elevationCorrection(elevation, lat) {
+            const params = {
+                n: 1.0177e-2,
+                k: -3.9527e-1,
+                alpha: 10.275,
+                a: [
+                    8.5236e-6,   -6.3670e-7,  -7.0814e-9,
+                    -9.9182e-9,  9.9250e-10,  2.4925e-11,
+                    3.8615e-12, -4.8194e-13, -1.5371e-14
+                ]
+            };
+
+            const h = calculateAirPressure(elevation);
+            if (h >= 1013) return 1.0;
+
+            const z = 1013 - h;
+            const latRad = Math.abs(lat) * Math.PI / 180;
+            const R_C = 14.9 * Math.pow(Math.cos(latRad), 4);
+            if (R_C <= 1e-6) return 1.0;
+
+            try {
+                const x = z;
+                // Term 1
+                const expArg = -params.alpha * Math.pow(R_C, -params.k);
+                const denominator = 1 + Math.exp(expArg);
+                const term1 = (params.n / denominator) * x;
+
+                // Term 2
+                const term2 = (
+                    params.a[0] + 
+                    params.a[1] * R_C + 
+                    params.a[2] * R_C**2
+                ) * x**2 / 2;
+
+                // Term 3
+                const term3 = (
+                    params.a[3] + 
+                    params.a[4] * R_C + 
+                    params.a[5] * R_C**2
+                ) * x**3 / 3;
+
+                // Term 4
+                const term4 = (
+                    params.a[6] + 
+                    params.a[7] * R_C + 
+                    params.a[8] * R_C**2
+                ) * x**4 / 4;
+
+                const c = term1 + term2 + term3 + term4;
+                if (c <= 0 || c > 1e6) return 1.0;
+
+                return Math.exp(-z / c); // 修复指数符号错误
+            } catch (e) {
+                console.error('海拔校正计算错误:', e);
+                return 1.0;
+            }
+        }
+
+        // 纬度校正因子
+        function latitudeCorrection(lat) {
             const alpha = 10.275;
             const k = 0.9615;
             const latRad = Math.abs(lat) * Math.PI / 180;
@@ -72,42 +147,53 @@
             return R_C <= 0 ? 1.0 : 1 - Math.exp(-alpha * Math.pow(R_C, -k));
         }
 
-        // 深度衰减因子（修复缺失分号错误）
+        // 深度衰减
         function depthAttenuation(depth) {
-            const L = 150;   // 衰减长度
-            const density = 2.7; // 岩石密度（g/cm³）
+            const L = 150;   // 衰减长度 (g/cm²)
+            const density = 2.7;  // 密度 (g/cm³)
             return Math.exp(-(depth * density) / L);
         }
 
+        // 主计算函数
         function calculate() {
-            // 清空错误提示
+            // 重置状态
             document.getElementById('error').innerHTML = '';
-            document.querySelectorAll('input').forEach(input => 
-                input.classList.remove('error-border')
-            );
+            document.getElementById('results').innerHTML = '';
+            document.querySelectorAll('input').forEach(i => i.style.border = "1px solid #ccc");
 
-            // 获取输入值（强制要求所有输入）
+            // 获取输入
             const lat = getInputValue('latitude');
             const elev = getInputValue('elevation');
             const depth = getInputValue('depth');
 
-            // 验证输入
-            if ([lat, elev, depth].some(v => v === null)) {
-                document.getElementById('error').innerHTML = 
-                    '错误：请填写所有输入项（必须为数字）';
+            // 输入验证
+            if (lat === null || elev === null || depth === null) {
+                document.getElementById('error').innerHTML = "错误：请填写所有输入项（必须为数字）";
                 return;
             }
 
-            // 计算结果
+            // 计算校正因子
+            const elevCorr = elevationCorrection(elev, lat);
+            const latCorr = latitudeCorrection(lat);
+            const depthCorr = depthAttenuation(depth);
+
+            // 生成结果
             let results = "<h3>校正后产率（atoms/g/yr）:</h3>";
-            for (const nuclide in P0) {
-                const rate = P0[nuclide] * 
-                           elevationFactor(elev) * 
-                           latitudeFactor(lat) * 
-                           depthAttenuation(depth);
-                
-                results += `${nuclide}: ${rate.toFixed(2)}<br>`;
+            for (const [nuclide, base] of Object.entries(P0)) {
+                const rate = base * elevCorr * latCorr * depthCorr;
+                results += `<div>${nuclide}: <b>${rate.toFixed(2)}</b></div>`;
             }
+
+            // 显示调试信息
+            results += `
+                <div style="margin-top:15px;color:#666;">
+                    调试信息：
+                    <div>海拔校正因子 = ${elevCorr.toFixed(4)}</div>
+                    <div>纬度校正因子 = ${latCorr.toFixed(4)}</div>
+                    <div>深度衰减因子 = ${depthCorr.toFixed(4)}</div>
+                </div>
+            `;
+
             document.getElementById('results').innerHTML = results;
         }
     </script>

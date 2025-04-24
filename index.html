@@ -98,6 +98,20 @@
     }
 
             try {
+
+
+
+
+                     const params = {
+                n: 1.0177e-2,
+                k: -3.9527e-1,
+                alpha: 10.275,
+                a: [
+                    8.5236e-6,   -6.3670e-7,  -7.0814e-9,
+                    -9.9182e-9,  9.9250e-10,  2.4925e-11,
+                    3.8615e-12, -4.8194e-13, -1.5371e-14
+                ]
+            };
                 const x = z;
                 // Term 1
                 const expArg = -params.alpha * Math.pow(R_C, -params.k);
